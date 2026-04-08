@@ -1,5 +1,3 @@
-import /microtrust.rc
-
 on fs
     start prepdecrypt
     write /sys/class/power_supply/usb/otg_switch 1
@@ -25,7 +23,14 @@ service keystore /system/bin/keystore /tmp/misc/keystore
     disabled
     seclabel u:r:recovery:s0
 
-
+service mobicore /vendor/bin/mcDriverDaemon --P1 /mnt/vendor/persist/mcRegistry \
+    -r /vendor/app/mcRegistry/06090000000000000000000000000000.drbin \
+    -r /vendor/app/mcRegistry/020f0000000000000000000000000000.drbin \
+    -r /vendor/app/mcRegistry/05120000000000000000000000000000.drbin
+    user root
+    group root
+    disabled
+    seclabel u:r:recovery:s0
 
 service mtk.plpath.utils.link /system/bin/mtk_plpath_utils
     class main
@@ -35,6 +40,11 @@ service mtk.plpath.utils.link /system/bin/mtk_plpath_utils
     oneshot
     seclabel u:r:recovery:s0
 
+service hal_cryptoeng_oppo /system/bin/vendor.oppo.hardware.cryptoeng@1.0-service
+    user root
+    group root drmrpc
+    disabled
+    seclabel u:r:recovery:s0
 
 service keymaster-4-0 /system/bin/android.hardware.keymaster@4.0-service.trustonic
     user root
@@ -60,12 +70,14 @@ on property:crypto.ready=1 && property:ro.crypto.state=encrypted
     install_keyring
 
 on property:crypto.ready=1 && property:hwservicemanager.ready=true
+    start hal_cryptoeng_oppo
     start keystore
     start mobicore
     start keymaster-4-0
     start gatekeeper-1-0
 
 on property:ro.crypto.state=unsupported
+    stop hal_cryptoeng_oppo
     stop mobicore
     stop keymaster-4-0
     stop gatekeeper-1-0
@@ -73,6 +85,7 @@ on property:ro.crypto.state=unsupported
     stop hwservicemanager
 
 on property:ro.crypto.state=unencrypted
+    stop hal_cryptoeng_oppo
     stop mobicore
     stop keymaster-4-0
     stop gatekeeper-1-0
@@ -80,6 +93,7 @@ on property:ro.crypto.state=unencrypted
     stop hwservicemanager
 
 on property:twrp.decrypt.done=true
+    stop hal_cryptoeng_oppo
     stop mobicore
     stop keymaster-4-0
     stop gatekeeper-1-0
